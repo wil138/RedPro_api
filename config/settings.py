@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j1fjgs%mbs)-9vs8o3oo9%9c04g6g96yb_ywyy@z@j3m^u5c5q'
+SECRET_KEY = 'django-insecure-j1fogs%mbs)-9vs8o3oo9%9c04g6g96yb_ywyy@z@j3m^u5c5q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'RedPro_api.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -70,7 +70,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'RedPro_api.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'RedPro_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',                # Usamos el adaptador de SQL Server, tambien puede usarse sql_server.pyodbc
+        'ENGINE': 'mssql',                # Usamos el adaptador de SQL Server, puede usarse sql_server.pyodbc
         'NAME': 'RedPro',              # El nombre de la DB que creaste en tu SQL
         # En settings.py
         'HOST': 'Wil\\WIL',

@@ -3,10 +3,10 @@
 import os
 import sys
 
-
+#python manage.py runserver
 def main():
     """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'RedPro_api.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     try:
         from django.core.management import execute_from_command_line
     except ImportError as exc:
@@ -20,4 +20,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-#python manage.py inspectdb Categoria Clientes Establecimientos EstadoPedido EstadoProducto Factura MetodoPago Pedido Productos Proveedor Usuario
