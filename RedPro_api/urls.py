@@ -1,12 +1,15 @@
-from django.urls import path, include
+# --- Registro de ViewSets Principales ---
+from sys import path
+from django.db import router
 from rest_framework.routers import DefaultRouter
 from . import views
+
 
 # Crea una instancia de DefaultRouter
 # El Router registrará automáticamente las rutas para los ViewSets
 router = DefaultRouter()
 
-# --- Registro de ViewSets Principales ---
+
 router.register(r'usuarios', views.UserViewSet, basename='usuario')
 # /clientes/ y /clientes/{pk}/
 router.register(r'clientes', views.ClienteViewSet, basename='cliente')
@@ -32,9 +35,8 @@ router.register(r'estados/pedido', views.EstadoPedidoViewSet, basename='estadope
 # /metodos/pago/
 router.register(r'metodos/pago', views.MetodoPagoViewSet, basename='metodopago')
 
-
 # La lista de URLs que se generan automáticamente
-urlpatterns = [
+urlpatterns = router.urls = [
     # Incluye todas las rutas generadas por el Router
     path('', include(router.urls)),
-]
+    ]
