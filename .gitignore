@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+
+# VS Code / Visual Studio
+.vscode/
+.vs/
+
+# Byte-compiled / distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PyCharm
+.idea/

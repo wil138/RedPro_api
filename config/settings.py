@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-j1fogs%mbs)-9vs8o3oo9%9c04g6g96yb_ywyy@z@j3m^u5c5q'
+SECRET_KEY = 'django-insecure-j1fjgs%mbs)-9vs8o3oo9%9c04g6g96yb_ywyy@z@j3m^u5c5q'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -32,7 +32,8 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
-    'django.contrib.auth',
+    # We must keep django.contrib.auth enabled for Django's permission/session framework
+    'django.contrib.auth', 
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -40,8 +41,15 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'RedPro_api',
+    
 
 ]
+
+# --- Setting the custom user model is required when models reference a User-like model ---
+# This explicitly tells Django that RedPro_api.Usuario is the authoritative user model.
+# AUTH_USER_MODEL = 'RedPro_api.Usuario'
+# ----------------------------------------------------------------------------------------
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -78,15 +86,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'mssql',                # Usamos el adaptador de SQL Server, puede usarse sql_server.pyodbc
-        'NAME': 'RedPro',              # El nombre de la DB que creaste en tu SQL
-        # En settings.py
+        'ENGINE': 'mssql',
+        'NAME': 'RedPro', 
         'HOST': 'Wil\\WIL',
-        'PORT': '',            # Puerto estándar de SQL Server
+        'PORT': '', 
+        # --- IMPORTANT: ADD AUTHENTICATION DETAILS HERE ---
+        # If you are NOT using Windows Authentication (trusted_connection), 
+        # you MUST provide a USER and PASSWORD for SQL Server login.
+        # 'USER': 'your_sql_user',
+        # 'PASSWORD': 'your_sql_password',
+        # ---------------------------------------------------
         'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server', # Asegúrate que este driver esté instalado
-            # 'trusted_connection': 'yes',                 # clave para Windows Authentication
-            'extra_params': 'TrustServerCertificate=yes', # Podría ser necesario si no usas SSL/TLS
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'extra_params': 'TrustServerCertificate=yes',
+            # 'trusted_connection': 'yes',                 
         },
     }
 }
@@ -144,12 +157,13 @@ REST_FRAMEWORK = {
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), # Duración del token de acceso
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Duración del token de refresco
-    'ROTATE_REFRESH_TOKENS': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60), 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True, 
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,                       # Reutiliza la clave secreta de Django
-    'USER_ID_FIELD': 'id_cliente',                   # Usaremos un campo personalizado del modelo Cliente
-    'USER_ID_CLAIM': 'user_id',
-    # Acá se pueden agregar más configuraciones
+    'SIGNING_KEY': SECRET_KEY, 
+    'USER_ID_FIELD': 'id', 
+    'USER_ID_CLAIM': 'user_id', 
+    'AUTH_HEADER_TYPES': ('Bearer',), 
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
 }
