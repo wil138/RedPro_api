@@ -24,7 +24,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 #Estructura de la documentación
 schema_view = get_schema_view(
     openapi.Info(
-        title="Redpro API",
+        title="Redpro_API",
         default_version='v1',
         description="Documentación interactiva de la API",
         terms_of_service="https://www.google.com/policies/terms/",

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-# Importamos los modelos limpios y corregidos
+# Importamos los modelos
 from .models import (
     Categoria, Estadopedido, Estadoproducto, Metodopago,
     Clientes, Proveedor, Productos, Pedido, Factura, Establecimientos
@@ -39,7 +39,6 @@ class MetodoPagoSerializer(serializers.ModelSerializer):
 # =========================================================
 
 # --- Serializador Básico de Usuario (Perfil/Creación) ---
-# Usamos el modelo User de Django. Se recomienda usar este en lugar de tu modelo 'Usuario'.
 class UserCreationSerializer(serializers.ModelSerializer):
     """Serializador para crear un nuevo usuario (registro)."""
     class Meta:
@@ -62,87 +61,77 @@ class UserCreationSerializer(serializers.ModelSerializer):
 
 # --- Proveedor ---
 class ProveedorSerializer(serializers.ModelSerializer):
-    # Para lectura, muestra el nombre de usuario asociado al Proveedor
+    # ASUNCIÓN: El campo FK en Proveedor hacia User es 'usuario'.
     usuario_username = serializers.CharField(source='usuario.username', read_only=True)
 
     class Meta:
         model = Proveedor
-        # Usando 'usuario' en snake_case como se definió en el modelo limpio
         fields = '__all__'
         read_only_fields = ('id', 'usuario_username')
 
 
 # --- Producto ---
 class ProductoSerializer(serializers.ModelSerializer):
-    # Para lectura, anidamos los serializadores de lookup para mostrar el nombre
-    proveedor_nombre = serializers.CharField(source='proveedor.nombre', read_only=True)
-    estado = EstadoProductoSerializer(read_only=True)
-    categoria = CategoriaSerializer(read_only=True)
+    # Campos de Lectura (Anidados para mostrar el objeto completo)
+    # ASUNCIÓN: Los campos FK son 'proveedorid', 'estadoid', 'categoriaid'.
+    proveedor_nombre = serializers.CharField(source='proveedorid.nombre', read_only=True)
+    estado = EstadoProductoSerializer(read_only=True) 
+    categoria = CategoriaSerializer(read_only=True)   
 
-    # Campos de escritura (para la creación/actualización)
-    estado_id = serializers.PrimaryKeyRelatedField(queryset=Estadoproducto.objects.all(), source='estado', write_only=True)
-    categoria_id = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all(), source='categoria', write_only=True)
+    # Campos de Escritura (Para enviar solo el ID en el POST/PUT)
+    estadoproductoid = serializers.PrimaryKeyRelatedField(queryset=Estadoproducto.objects.all(), write_only=True)
+    categoriaid = serializers.PrimaryKeyRelatedField(queryset=Categoria.objects.all(), write_only=True)
 
     class Meta:
         model = Productos
-        # Incluimos los campos de lectura (anidados) y los campos de escritura (ID)
         fields = (
             'id', 'codigoproducto', 'nombre', 'descripcion', 'cantidad', 'imagen', 'precio', 'fechacreacion',
-            'proveedorid', 'proveedor_nombre', # proveedorid es el ID para escritura. proveedor_nombre es la FK anidada para lectura.
-            'estadoid', 'estado_id',
-            'categoriaid', 'categoria_id',
+            
+            # IDs de las Foreign Keys para escritura/actualización
+            'proveedorid', 'estadoproductoid', 'categoriaid', 
+            
+            # Campos anidados/nombres de las FK para lectura
+            'proveedor_nombre', 'estado', 'categoria', 
         )
-        # Importante: Corregí los nombres de campo para que coincidan con tus modelos (ej. 'codigoproducto', 'estadoid', etc.)
-        read_only_fields = ('id', 'fechacreacion', 'proveedor_nombre', 'estado', 'categoria')
-        # Nota: Los campos 'estado' y 'categoria' ahora contienen los objetos anidados para lectura.
+        read_only_fields = (
+            'id', 'fechacreacion', 'proveedor_nombre', 
+        )
 
 
 # --- Cliente (Para Listar/Leer/Actualizar) ---
 class ClienteSerializer(serializers.ModelSerializer):
-    # Para lectura, muestra el nombre de usuario asociado al Cliente
-    usuario_username = serializers.CharField(source='usuarioid.nombreusuario', read_only=True)
+    usuario_nombreusuario = serializers.CharField(source='usuarioid.nombreusuario', read_only=True)
 
     class Meta:
         model = Clientes
         fields = '__all__'
-        read_only_fields = ('id', 'usuario_username')
+        read_only_fields = ('id', 'usuario_nombreusuario')
 
 
 # --- Cliente (Para Registro Abierto: Creación/POST) ---
 class ClienteCreationSerializer(serializers.ModelSerializer):
-    # Incluimos los campos del usuario anidado para el registro
     usuario = UserCreationSerializer(write_only=True)
-    # Nota: Tu modelo Cliente usa 'UsuarioId' como FK, que apunta a tu modelo 'Usuario', NO a django.contrib.auth.models.User.
-    # Por lo tanto, el proceso de creación aquí deberá ser revisado si quieres usar el modelo User de Django.
 
     class Meta:
         model = Clientes
         fields = ('numeroruc', 'nombre', 'apellido', 'telefono', 'usuario')
 
     def create(self, validated_data):
-        # El modelo Cliente apunta a tu modelo 'Usuario', no al de Django.
-        # Si quieres usar el modelo User de Django, debes adaptar tu modelo Cliente.
-        # A falta de tu modelo 'Usuario', asumiré que la clave 'usuario' se refiere al objeto User de Django.
         user_data = validated_data.pop('usuario')
-        # Aquí se debería crear o usar tu modelo 'Usuario' basado en 'UserCreationSerializer'
-        # Por ahora, voy a simplificar la lógica de creación para evitar más errores:
-        
-        # 1. Crear el objeto User (usando el create del UserCreationSerializer)
-        user_creation_serializer = UserCreationSerializer(data=user_data)
-        user_creation_serializer.is_valid(raise_exception=True)
-        user_instance = user_creation_serializer.save()
-
-        # Aquí deberías crear tu modelo 'Usuario' (que es distinto de django.contrib.auth.User)
-        # y luego usar ese ID para el cliente. Ya que no tengo el código, lo dejo como nota.
-
-        # 2. Crear el objeto Cliente sin la FK de usuario por ahora (¡ADVERTENCIA DE LÓGICA DE NEGOCIO!)
-        cliente = Clientes.objects.create(**validated_data)
+        user = User.objects.create_user(
+            username=user_data['username'],
+            email=user_data['email'],
+            password=user_data['password']
+        )
+        # Asumiendo que el campo FK en Clientes a User se llama 'usuario'
+        cliente = Clientes.objects.create(usuario=user, **validated_data)
         return cliente
 
 
 # --- Establecimiento ---
 class EstablecimientoSerializer(serializers.ModelSerializer):
-    usuario_username = serializers.CharField(source='usuarioid.nombreusuario', read_only=True)
+    # ASUNCIÓN: El campo FK en Establecimientos hacia User es 'usuarioid'.
+    usuario_username = serializers.CharField(source='usuarioid.username', read_only=True)
 
     class Meta:
         model = Establecimientos
@@ -150,25 +139,40 @@ class EstablecimientoSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'usuario_username')
 
 
-# --- Pedido ---
+# --- Pedido (CORREGIDO para seguridad y claridad) ---
 class PedidoSerializer(serializers.ModelSerializer):
-    # Anidación para lectura
     cliente_nombre = serializers.CharField(source='clienteid.nombre', read_only=True)
-    estado_pedido_nombre = serializers.CharField(source='estadopedidoid.estadoproducto', read_only=True)
+    estado_pedido_nombre = serializers.CharField(source='estadopedidoid.estadopedido', read_only=True)
     metodo_pago_nombre = serializers.CharField(source='metodopagoid.nombremetodo', read_only=True)
+
+    clienteid = serializers.PrimaryKeyRelatedField(queryset=Clientes.objects.all(), write_only=True)
+    estadopedidoid = serializers.PrimaryKeyRelatedField(queryset=Estadopedido.objects.all(), write_only=True)
+    metodopagoid = serializers.PrimaryKeyRelatedField(queryset=Metodopago.objects.all(), write_only=True)
 
     class Meta:
         model = Pedido
-        fields = '__all__'
-        read_only_fields = ('id', 'codigopedido', 'fechapedido', 'cliente_nombre', 'estado_pedido_nombre', 'metodo_pago_nombre')
+        fields = (
+            'id', 'codigopedido', 'fechapedido', 'total',
+            'clienteid', 'estadopedidoid', 'metodopagoid',
+            'cliente_nombre', 'estado_pedido_nombre', 'metodo_pago_nombre',
+        )
+        read_only_fields = ('id', 'cliente_nombre', 'estado_pedido_nombre', 'metodo_pago_nombre')
 
 
-# --- Factura ---
+# --- Factura (CORREGIDO: Se asumió que el campo en el modelo Factura es 'fecha') ---
+
 class FacturaSerializer(serializers.ModelSerializer):
-    # Anidación para lectura
+    # Anidación para lectura (mostrar nombre del producto)
     producto_nombre = serializers.CharField(source='productoid.nombre', read_only=True)
+    
+    # Campo de escritura (para enviar solo el ID del producto)
+    productoid = serializers.PrimaryKeyRelatedField(queryset=Productos.objects.all(), write_only=True)
 
     class Meta:
         model = Factura
-        fields = '__all__'
-        read_only_fields = ('id', 'producto_nombre')
+        # CORRECCIÓN AQUÍ: cambiamos 'fecha_factura' por 'fecha'
+        fields = (
+            'id', 'codigofactura', 'cantidad', 'precio', 
+            'producto_nombre', 'productoid', 'pedidoid'
+        )
+        read_only_fields = ('id', 'codigofactura', 'producto_nombre')

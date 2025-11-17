@@ -4,7 +4,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.authentication import JWTAuthentication # 🔑 Necesario para el 401
 from .models import (
     Categoria, Estadoproducto, Estadopedido, Metodopago,
-    Clientes, Proveedor, Productos, Pedido, Factura, Establecimientos
+    Clientes, Proveedor, Productos, Pedido, Factura, Establecimientos,
+    Usuario
 )
 from .serializers import (
     CategoriaSerializer, EstadoProductoSerializer, EstadoPedidoSerializer, MetodoPagoSerializer,
@@ -12,6 +13,7 @@ from .serializers import (
     ProveedorSerializer, ProductoSerializer, PedidoSerializer, FacturaSerializer,
     EstablecimientoSerializer, UserCreationSerializer
 )
+from drf_yasg.utils import swagger_auto_schema
 
 # --- Configuración de Seguridad Base (Recomendada) ---
 
@@ -27,9 +29,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserCreationSerializer
     
-    # 🔒 Protección JWT
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+   
 
 
 # --- ViewSets de Tablas de Lookup ---
@@ -37,32 +37,28 @@ class CategoriaViewSet(viewsets.ModelViewSet):
     """CRUD para categorías de productos."""
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+
 
 
 class EstadoProductoViewSet(viewsets.ModelViewSet):
     """CRUD para estados de productos (Disponible, Agotado, etc.)."""
     queryset = Estadoproducto.objects.all()
     serializer_class = EstadoProductoSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+ 
 
 
 class EstadoPedidoViewSet(viewsets.ModelViewSet):
     """CRUD para estados de pedidos (Pendiente, Enviado, Entregado, etc.)."""
     queryset = Estadopedido.objects.all()
     serializer_class = EstadoPedidoSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+ 
 
 
 class MetodoPagoViewSet(viewsets.ModelViewSet):
     """CRUD para métodos de pago (Efectivo, Tarjeta, etc.)."""
     queryset = Metodopago.objects.all()
     serializer_class = MetodoPagoSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+    
 
 
 # --- ViewSets para Entidades Principales (Protegidas) ---
@@ -71,40 +67,35 @@ class ProveedorViewSet(viewsets.ModelViewSet):
     """CRUD para la gestión de proveedores."""
     queryset = Proveedor.objects.all()
     serializer_class = ProveedorSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+ 
 
 
 class ProductoViewSet(viewsets.ModelViewSet):
     """CRUD para la gestión de productos."""
     queryset = Productos.objects.all()
     serializer_class = ProductoSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+  
 
 
 class EstablecimientoViewSet(viewsets.ModelViewSet):
     """CRUD para la gestión de establecimientos."""
     queryset = Establecimientos.objects.all()
     serializer_class = EstablecimientoSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+  
 
 
 class PedidoViewSet(viewsets.ModelViewSet):
     """CRUD para la gestión de pedidos."""
     queryset = Pedido.objects.all()
     serializer_class = PedidoSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+   
 
 
 class FacturaViewSet(viewsets.ModelViewSet):
     """CRUD para la gestión de facturas/detalles de pedido."""
     queryset = Factura.objects.all()
     serializer_class = FacturaSerializer
-    authentication_classes = DEFAULT_AUTH
-    permission_classes = DEFAULT_PERMS
+   
 
 
 # --- ViewSet para Clientes (Permisos Condicionales) ---
@@ -117,7 +108,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
     """
     queryset = Clientes.objects.all()
     serializer_class = ClienteSerializer
-    authentication_classes = DEFAULT_AUTH
+    
 
     def get_serializer_class(self):
         """Usa ClienteCreationSerializer solo para la creación (POST)."""
@@ -133,3 +124,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
         
         # 🔒 Requiere autenticación (Token JWT) para GET, PUT, DELETE, etc.
         return [IsAuthenticated()]
+
+@swagger_auto_schema(auto_schema=None)
+class ProblematicViewSet(viewsets.ModelViewSet):
+    ...

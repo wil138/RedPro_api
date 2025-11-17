@@ -7,10 +7,9 @@
 #   * Make sure each ForeignKey and OneToOneField has `on_delete` set to the desired behavior
 #   * Remove `managed = False` lines if you wish to allow Django to create, modify, and delete the table
 # Feel free to rename the models, but don't rename db_table values or field names.
-
 from django.db import models
 
-# --- Modelo para cada tabla en la base de datos existente ---
+
 class Categoria(models.Model):
     id = models.AutoField(db_column='Id', primary_key=True)  # Field name made lowercase.
     nombrecategoria = models.CharField(db_column='NombreCategoria', max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)  # Field name made lowercase.
@@ -50,7 +49,7 @@ class Establecimientos(models.Model):
 
 class Estadopedido(models.Model):
     id = models.AutoField(db_column='Id', primary_key=True)  # Field name made lowercase.
-    estadoproducto = models.CharField(db_column='EstadoProducto', max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)  # Field name made lowercase.
+    estadopedido = models.CharField(db_column='EstadoPedido', max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)  # Field name made lowercase.
 
     class Meta:
         managed = False
@@ -68,7 +67,7 @@ class Estadoproducto(models.Model):
 
 class Factura(models.Model):
     id = models.AutoField(db_column='Id', primary_key=True)  # Field name made lowercase.
-    codigofactura = models.IntegerField(db_column='CodigoFactura', unique=True, blank=True, null=True)  # Field name made lowercase.
+    codigofactura = models.IntegerField(db_column='CodigoFactura', blank=True, null=True)  # Field name made lowercase.
     cantidad = models.IntegerField(db_column='Cantidad', blank=True, null=True)  # Field name made lowercase.
     precio = models.DecimalField(db_column='Precio', max_digits=10, decimal_places=2, blank=True, null=True)  # Field name made lowercase.
     pedidoid = models.ForeignKey('Pedido', models.DO_NOTHING, db_column='PedidoId', blank=True, null=True)  # Field name made lowercase.
@@ -112,7 +111,7 @@ class Productos(models.Model):
     precio = models.DecimalField(db_column='Precio', max_digits=10, decimal_places=2, blank=True, null=True)  # Field name made lowercase.
     fechacreacion = models.DateField(db_column='FechaCreacion', blank=True, null=True)  # Field name made lowercase.
     proveedorid = models.ForeignKey('Proveedor', models.DO_NOTHING, db_column='ProveedorId', blank=True, null=True)  # Field name made lowercase.
-    estadoid = models.ForeignKey(Estadoproducto, models.DO_NOTHING, db_column='EstadoId', blank=True, null=True)  # Field name made lowercase.
+    estadoproductoid = models.ForeignKey(Estadoproducto, models.DO_NOTHING, db_column='EstadoProductoId', blank=True, null=True)  # Field name made lowercase.
     categoriaid = models.ForeignKey(Categoria, models.DO_NOTHING, db_column='CategoriaId', blank=True, null=True)  # Field name made lowercase.
 
     class Meta:
@@ -143,10 +142,125 @@ class Usuario(models.Model):
     contrasena = models.CharField(db_column='Contrasena', max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)  # Field name made lowercase.
     fecharegistro = models.DateField(db_column='FechaRegistro', blank=True, null=True)  # Field name made lowercase.
     estado = models.CharField(db_column='Estado', max_length=50, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)  # Field name made lowercase.
+    codigousuario = models.CharField(db_column='CodigoUsuario', max_length=10, db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)  # Field name made lowercase.
 
     class Meta:
         managed = False
         db_table = 'Usuario'
+
+
+class AuthGroup(models.Model):
+    name = models.CharField(unique=True, max_length=150, db_collation='SQL_Latin1_General_CP1_CI_AS')
+
+    class Meta:
+        managed = False
+        db_table = 'auth_group'
+
+
+class AuthGroupPermissions(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
+    permission = models.ForeignKey('AuthPermission', models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = 'auth_group_permissions'
+        unique_together = (('group', 'permission'),)
+
+
+class AuthPermission(models.Model):
+    name = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING)
+    codename = models.CharField(max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS')
+
+    class Meta:
+        managed = False
+        db_table = 'auth_permission'
+        unique_together = (('content_type', 'codename'),)
+
+
+class AuthUser(models.Model):
+    password = models.CharField(max_length=128, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    last_login = models.DateTimeField(blank=True, null=True)
+    is_superuser = models.BooleanField()
+    username = models.CharField(unique=True, max_length=150, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    first_name = models.CharField(max_length=150, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    last_name = models.CharField(max_length=150, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    email = models.CharField(max_length=254, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    is_staff = models.BooleanField()
+    is_active = models.BooleanField()
+    date_joined = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'auth_user'
+
+
+class AuthUserGroups(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
+    group = models.ForeignKey(AuthGroup, models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = 'auth_user_groups'
+        unique_together = (('user', 'group'),)
+
+
+class AuthUserUserPermissions(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
+    permission = models.ForeignKey(AuthPermission, models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = 'auth_user_user_permissions'
+        unique_together = (('user', 'permission'),)
+
+
+class DjangoAdminLog(models.Model):
+    action_time = models.DateTimeField()
+    object_id = models.TextField(db_collation='SQL_Latin1_General_CP1_CI_AS', blank=True, null=True)
+    object_repr = models.CharField(max_length=200, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    action_flag = models.SmallIntegerField()
+    change_message = models.TextField(db_collation='SQL_Latin1_General_CP1_CI_AS')
+    content_type = models.ForeignKey('DjangoContentType', models.DO_NOTHING, blank=True, null=True)
+    user = models.ForeignKey(AuthUser, models.DO_NOTHING)
+
+    class Meta:
+        managed = False
+        db_table = 'django_admin_log'
+
+
+class DjangoContentType(models.Model):
+    app_label = models.CharField(max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    model = models.CharField(max_length=100, db_collation='SQL_Latin1_General_CP1_CI_AS')
+
+    class Meta:
+        managed = False
+        db_table = 'django_content_type'
+        unique_together = (('app_label', 'model'),)
+
+
+class DjangoMigrations(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    app = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    name = models.CharField(max_length=255, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    applied = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'django_migrations'
+
+
+class DjangoSession(models.Model):
+    session_key = models.CharField(primary_key=True, max_length=40, db_collation='SQL_Latin1_General_CP1_CI_AS')
+    session_data = models.TextField(db_collation='SQL_Latin1_General_CP1_CI_AS')
+    expire_date = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = 'django_session'
 
 
 class Sysdiagrams(models.Model):

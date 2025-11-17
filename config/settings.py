@@ -32,7 +32,6 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'django.contrib.admin',
-    # We must keep django.contrib.auth enabled for Django's permission/session framework
     'django.contrib.auth', 
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -41,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'RedPro_api',
+    'drf_yasg',
     
 
 ]
