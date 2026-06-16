@@ -24,14 +24,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Terceros
     'rest_framework',
     'drf_yasg',
     'corsheaders',
-    
+
     # Local
-    'TradConnect',
+    'WD_TradConnect',      # <-- App para el Data Warehouse
+    'TradConnect',    # App existente (transaccional)
 ]
 
 # =========================================================
@@ -56,7 +57,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [],  # Puedes añadir [BASE_DIR / 'templates'] si pones plantillas ahí
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -72,13 +73,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # =========================================================
-# BASE DE DATOS SQL Server
+# BASES DE DATOS (DOS CONEXIONES)
 # =========================================================
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
-        'NAME': 'TC',
+        'NAME': 'TC',                       # Base transaccional
         'HOST': 'Wil\\WIL',
+        'PORT': '',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server',
+            'extra_params': 'TrustServerCertificate=yes',
+        },
+    },
+    'trad_dw': {
+        'ENGINE': 'mssql',
+        'NAME': 'TradDW',                   # Data Warehouse
+        'HOST': 'Wil\\WIL',                 # Cambia host si está en otro servidor
         'PORT': '',
         'OPTIONS': {
             'driver': 'ODBC Driver 17 for SQL Server',
@@ -87,22 +98,17 @@ DATABASES = {
     }
 }
 
+# Router para dirigir modelos de la app 'analytics' a 'trad_dw'
+DATABASE_ROUTERS = ['config.db_routers.DWAnalyticsRouter']
+
 # =========================================================
 # VALIDACIÓN DE CONTRASEÑAS
 # =========================================================
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
 # =========================================================
@@ -123,16 +129,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # =========================================================
 # DJANGO REST FRAMEWORK
 # =========================================================
-# config/settings.py
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',  # ← Cambiado
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
+
 # =========================================================
 # CONFIGURACIÓN JWT
 # =========================================================
@@ -152,16 +157,9 @@ SIMPLE_JWT = {
 # CONFIGURACIÓN CORS
 # =========================================================
 CORS_ALLOW_ALL_ORIGINS = True
-
 CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+    'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
 ]
-
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
