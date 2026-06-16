@@ -25,6 +25,7 @@ urlpatterns = [
     
     # API principal con todas las rutas
     path('api/', include('TradConnect.urls')),
+    path('WDapi/', include('WD_TradConnect.urls')),  # Rutas del Data Warehouse
     
     # Documentación Swagger/OpenAPI
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),

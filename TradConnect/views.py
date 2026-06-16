@@ -1,5 +1,4 @@
-# views.py - TradConnect con Swagger, sin catálogos expuestos, sin Factura
-
+# views.py - TradConnect con Swagger (sin factura)
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -30,7 +29,6 @@ from .serializers import (
     DepartamentoSerializer, MunicipioSerializer, TipoDocumentoSerializer
 )
 
-# CORRECCIÓN: instanciar JWTAuthentication()
 DEFAULT_AUTH = [JWTAuthentication]
 DEFAULT_PERMS = [IsAuthenticated]
 
@@ -152,8 +150,6 @@ class AuthViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=['get'], authentication_classes=DEFAULT_AUTH, permission_classes=DEFAULT_PERMS)
     def me(self, request):
-        # 🔐 Solución robusta: extraer usuario manualmente del token
-        # Esto evita problemas con el modelo de usuario personalizado
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
             return Response({'error': 'Token no proporcionado o formato inválido'}, status=401)
@@ -164,7 +160,6 @@ class AuthViewSet(viewsets.ViewSet):
             usuario = Usuario.objects.get(id=user_id)
         except Exception as e:
             return Response({'error': f'Token inválido: {str(e)}'}, status=401)
-
         empresa = Empresa.objects.filter(usuarioid=usuario).first()
         return Response({
             'usuario': UsuarioSerializer(usuario).data,
@@ -179,7 +174,6 @@ class AuthViewSet(viewsets.ViewSet):
     )
     @action(detail=False, methods=['get'], authentication_classes=DEFAULT_AUTH, permission_classes=DEFAULT_PERMS)
     def my_data(self, request):
-        # Extraer usuario manualmente también (por consistencia)
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
             return Response({'error': 'Token no proporcionado'}, status=401)
@@ -190,7 +184,6 @@ class AuthViewSet(viewsets.ViewSet):
             usuario = Usuario.objects.get(id=user_id)
         except Exception:
             return Response({'error': 'Token inválido'}, status=401)
-
         empresa = Empresa.objects.filter(usuarioid=usuario).first()
         if not empresa:
             return Response({'error': 'Usuario sin empresa'}, status=400)
@@ -286,6 +279,61 @@ class AuthViewSet(viewsets.ViewSet):
             }
         return Response(dump)
 
+    # ================= NUEVOS ENDPOINTS =================
+    @swagger_auto_schema(
+        operation_description="Cambiar contraseña del usuario autenticado",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['old_password', 'new_password'],
+            properties={
+                'old_password': openapi.Schema(type=openapi.TYPE_STRING, format='password'),
+                'new_password': openapi.Schema(type=openapi.TYPE_STRING, format='password'),
+            }
+        ),
+        responses={200: 'OK', 400: 'Error', 401: 'No autorizado'},
+        tags=['Perfil']
+    )
+    @action(detail=False, methods=['post'], authentication_classes=DEFAULT_AUTH, permission_classes=DEFAULT_PERMS)
+    def change_password(self, request):
+        user = request.user
+        old = request.data.get('old_password')
+        new = request.data.get('new_password')
+        if not old or not new:
+            return Response({'error': 'Ambas contraseñas son requeridas'}, status=400)
+        if not check_password(old, user.contrasena):
+            return Response({'error': 'Contraseña actual incorrecta'}, status=400)
+        if len(new) < 6:
+            return Response({'error': 'La nueva contraseña debe tener al menos 6 caracteres'}, status=400)
+        user.contrasena = make_password(new)
+        user.save()
+        return Response({'success': True, 'message': 'Contraseña actualizada correctamente'})
+
+    @swagger_auto_schema(
+        operation_description="Actualizar perfil del usuario (nombre, email, teléfono)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'nombreusuario': openapi.Schema(type=openapi.TYPE_STRING),
+                'correoelectronico': openapi.Schema(type=openapi.TYPE_STRING, format='email'),
+                'telefono': openapi.Schema(type=openapi.TYPE_STRING),
+            }
+        ),
+        responses={200: 'OK', 400: 'Error'},
+        tags=['Perfil']
+    )
+    @action(detail=False, methods=['put'], authentication_classes=DEFAULT_AUTH, permission_classes=DEFAULT_PERMS)
+    def update_profile(self, request):
+        user = request.user
+        data = request.data
+        if 'nombreusuario' in data:
+            user.nombreusuario = data['nombreusuario']
+        if 'correoelectronico' in data:
+            user.correoelectronico = data['correoelectronico']
+        if 'telefono' in data:
+            user.telefono = data['telefono']
+        user.save()
+        return Response(UsuarioSerializer(user).data)
+
 # =========================================================
 # MARKETPLACE (público, solo lectura)
 # =========================================================
@@ -325,7 +373,7 @@ class SucursalViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 # =========================================================
-# PRODUCTOS (solo del usuario autenticado) - CON PROTECCIÓN SWAGGER
+# PRODUCTOS (solo del usuario autenticado)
 # =========================================================
 class ProductoViewSet(viewsets.ModelViewSet):
     serializer_class = ProductoSerializer
@@ -333,10 +381,8 @@ class ProductoViewSet(viewsets.ModelViewSet):
     permission_classes = DEFAULT_PERMS
 
     def get_queryset(self):
-        # 🔴 Protección contra peticiones falsas de Swagger
         if getattr(self, 'swagger_fake_view', False):
             return Producto.objects.none()
-        # 🔴 Protección contra usuario anónimo
         if not self.request.user or self.request.user.is_anonymous:
             return Producto.objects.none()
         empresa = Empresa.objects.filter(usuarioid=self.request.user).first()
@@ -353,7 +399,7 @@ class ProductoViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 # =========================================================
-# INVENTARIO POR BODEGA (privado) - CON PROTECCIÓN SWAGGER
+# INVENTARIO POR BODEGA (privado)
 # =========================================================
 class InventarioBodegaViewSet(viewsets.ModelViewSet):
     serializer_class = InventarioBodegaSerializer
@@ -375,7 +421,7 @@ class InventarioBodegaViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 # =========================================================
-# PROMOCIONES (privado) - CON PROTECCIÓN SWAGGER
+# PROMOCIONES (privado)
 # =========================================================
 class PromocionViewSet(viewsets.ModelViewSet):
     serializer_class = PromocionSerializer
@@ -397,7 +443,7 @@ class PromocionViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 # =========================================================
-# PEDIDOS (privado) + cambio de estado - CON PROTECCIÓN SWAGGER
+# PEDIDOS (privado) + cambio de estado
 # =========================================================
 class PedidoViewSet(viewsets.ModelViewSet):
     serializer_class = PedidoSerializer
@@ -534,7 +580,6 @@ class PedidoViewSet(viewsets.ModelViewSet):
             comentario=comentario,
             fechacambio=timezone.now()
         )
-        # Descontar stock si nuevo estado es "Completado"
         if nuevo_estado.estadonombre.lower() == 'completado':
             detalles = Detallepedido.objects.filter(pedidoid=pedido)
             for detalle in detalles:
@@ -556,7 +601,7 @@ class PedidoViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 # =========================================================
-# DETALLES DE PEDIDO, HISTORIAL, DOCUMENTOS - CON PROTECCIÓN SWAGGER
+# DETALLES DE PEDIDO, HISTORIAL, DOCUMENTOS
 # =========================================================
 class DetallePedidoViewSet(viewsets.ModelViewSet):
     queryset = Detallepedido.objects.all()
@@ -604,7 +649,7 @@ class DocumentoSucursalViewSet(viewsets.ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 # =========================================================
-# DASHBOARD PARA PROVEEDORES - CON PROTECCIÓN SWAGGER
+# DASHBOARD PARA PROVEEDORES
 # =========================================================
 class ProviderDashboardViewSet(viewsets.ViewSet):
     authentication_classes = DEFAULT_AUTH
@@ -674,15 +719,10 @@ class ProviderDashboardViewSet(viewsets.ViewSet):
         data = [float(v['total']) for v in ventas_mensuales]
         return Response({'labels': labels, 'data': data})
 
-
 # =========================================================
 # CATÁLOGOS PÚBLICOS (solo lectura, sin autenticación)
 # =========================================================
-
 class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    Lista de categorías de productos.
-    """
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
     permission_classes = [AllowAny]
@@ -690,11 +730,6 @@ class CategoriaViewSet(viewsets.ReadOnlyModelViewSet):
     @swagger_auto_schema(tags=['Catálogos Públicos'])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
-    @swagger_auto_schema(tags=['Catálogos Públicos'])
-    def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
-
 
 class UnidadMedidaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Unidadmedida.objects.all()
@@ -705,7 +740,6 @@ class UnidadMedidaViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-
 class MonedaViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Moneda.objects.all()
     serializer_class = MonedaSerializer
@@ -714,7 +748,6 @@ class MonedaViewSet(viewsets.ReadOnlyModelViewSet):
     @swagger_auto_schema(tags=['Catálogos Públicos'])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
 
 class MetodoPagoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Metodopago.objects.all()
@@ -725,7 +758,6 @@ class MetodoPagoViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-
 class EstadoPedidoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Estadopedido.objects.all()
     serializer_class = EstadoPedidoSerializer
@@ -734,7 +766,6 @@ class EstadoPedidoViewSet(viewsets.ReadOnlyModelViewSet):
     @swagger_auto_schema(tags=['Catálogos Públicos'])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
 
 class DepartamentoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Departamento.objects.all()
@@ -745,7 +776,6 @@ class DepartamentoViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-
 class MunicipioViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Municipio.objects.all()
     serializer_class = MunicipioSerializer
@@ -754,7 +784,6 @@ class MunicipioViewSet(viewsets.ReadOnlyModelViewSet):
     @swagger_auto_schema(tags=['Catálogos Públicos'])
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
-
 
 class TipoDocumentoViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Tipodocumento.objects.all()

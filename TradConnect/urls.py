@@ -1,4 +1,4 @@
-# TradConnect/urls.py - Versión original (sin seguridad añadida)
+# TradConnect/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
@@ -18,7 +18,7 @@ router.register(r'historial-estado', views.HistorialEstadoPedidoViewSet, basenam
 router.register(r'documentos-sucursal', views.DocumentoSucursalViewSet, basename='documento-sucursal')
 router.register(r'dashboard', views.ProviderDashboardViewSet, basename='dashboard')
 
-# Catálogos públicos (si ya los agregaste, mantenlos; si no, agrégalos)
+# Catálogos públicos
 router.register(r'categorias', views.CategoriaViewSet, basename='categoria')
 router.register(r'unidades-medida', views.UnidadMedidaViewSet, basename='unidadmedida')
 router.register(r'monedas', views.MonedaViewSet, basename='moneda')
@@ -28,6 +28,7 @@ router.register(r'departamentos', views.DepartamentoViewSet, basename='departame
 router.register(r'municipios', views.MunicipioViewSet, basename='municipio')
 router.register(r'tipos-documento', views.TipoDocumentoViewSet, basename='tipodocumento')
 
+# Rutas de autenticación (incluye los nuevos endpoints)
 auth_routes = [
     path('auth/register/', views.AuthViewSet.as_view({'post': 'register'}), name='auth-register'),
     path('auth/login/', views.AuthViewSet.as_view({'post': 'login'}), name='auth-login'),
@@ -35,6 +36,9 @@ auth_routes = [
     path('auth/me/', views.AuthViewSet.as_view({'get': 'me'}), name='auth-me'),
     path('auth/my-data/', views.AuthViewSet.as_view({'get': 'my_data'}), name='auth-my-data'),
     path('auth/dump-all/', views.AuthViewSet.as_view({'post': 'dump_all_data'}), name='auth-dump-all'),
+    # Nuevos endpoints
+    path('auth/change-password/', views.AuthViewSet.as_view({'post': 'change_password'}), name='auth-change-password'),
+    path('auth/update-profile/', views.AuthViewSet.as_view({'put': 'update_profile'}), name='auth-update-profile'),
 ]
 
 urlpatterns = [
